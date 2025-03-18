@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""
+TRAPPIST-1 System Experiment
+
+This script runs simulations of the TRAPPIST-1 system using different
+integrators and compares their performance in terms of accuracy and speed.
+"""
+import sys
+from pathlib import Path
+
+# Add the project root directory to the Python path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
+
+from comparison_framework.test_cases.trappist1 import (
+    generate_trappist1_system, 
+    generate_trappist1_system_eccentric
+)
+from experiments.experiment_utils import (
+    run_experiment, 
+    plot_trajectory, 
+    plot_energy_conservation, 
+    plot_distances,
+    plot_comparison,
+    print_statistics,
+    ensure_directory
+)
+
+def main():
+    """Run the TRAPPIST-1 system experiment with different integrators."""
+    
+    # List of integrators to use
+    integrators = ['euler', 'leapfrog', 'rk4', 'wisdom_holman']
+    
+    # Parameters for the simulation
+    dt = 0.001            # Time step (years) - smaller because of the compact system
+    duration = 10         # Simulation duration (years) - shorter due to faster orbital periods
+    n_steps = int(duration / dt)  # Number of integration steps
+    
+    # Body names for plotting
+    body_names = [
+        "TRAPPIST-1", "TRAPPIST-1b", "TRAPPIST-1c", "TRAPPIST-1d", 
+        "TRAPPIST-1e", "TRAPPIST-1f", "TRAPPIST-1g", "TRAPPIST-1h"
+    ]
+    
+    # Output directories
+    output_dir = Path("results/trappist1")
+    circular_dir = output_dir / "circular"
+    eccentric_dir = output_dir / "eccentric"
+    ensure_directory(circular_dir)
+    ensure_directory(eccentric_dir)
+    
+    # Run circular orbit experiments
+    print("\nRunning circular orbit experiments...")
+    circular_results = {}
+    
+    for integrator in integrators:
+        print(f"\nUsing {integrator.upper()} integrator...")
+        
+        # Run the experiment
+        results = run_experiment(
+            integrator, 
+            generate_trappist1_system, 
+            dt=dt, 
+            n_steps=n_steps
+        )
+        
+        circular_results[integrator] = results
+        
+        # Generate plots
+        plot_trajectory(
+            results,
+            body_names=body_names,
+            output_path=circular_dir / f"trajectory_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System ({integrator.upper()})"
+        )
+        
+        plot_energy_conservation(
+            results,
+            output_path=circular_dir / f"energy_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System ({integrator.upper()})"
+        )
+        
+        plot_distances(
+            results,
+            reference_body=0,
+            body_names=body_names,
+            output_path=circular_dir / f"distances_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System ({integrator.upper()})"
+        )
+        
+        # Print statistics
+        print_statistics(results, integrator, body_names)
+    
+    # Generate comparison plots
+    for plot_type in ['energy', 'distances', 'computation_time']:
+        plot_comparison(
+            circular_results,
+            plot_type=plot_type,
+            output_path=circular_dir / f"{plot_type}_comparison.png",
+            title="TRAPPIST-1 System (Circular)"
+        )
+    
+    # Run eccentric orbit experiments
+    print("\nRunning eccentric orbit experiments...")
+    eccentric_results = {}
+    
+    for integrator in integrators:
+        print(f"\nUsing {integrator.upper()} integrator...")
+        
+        # Run the experiment
+        results = run_experiment(
+            integrator, 
+            generate_trappist1_system_eccentric, 
+            dt=dt, 
+            n_steps=n_steps
+        )
+        
+        eccentric_results[integrator] = results
+        
+        # Generate plots
+        plot_trajectory(
+            results,
+            body_names=body_names,
+            output_path=eccentric_dir / f"trajectory_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System Eccentric ({integrator.upper()})"
+        )
+        
+        plot_energy_conservation(
+            results,
+            output_path=eccentric_dir / f"energy_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System Eccentric ({integrator.upper()})"
+        )
+        
+        plot_distances(
+            results,
+            reference_body=0,
+            body_names=body_names,
+            output_path=eccentric_dir / f"distances_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System Eccentric ({integrator.upper()})"
+        )
+        
+        # Print statistics
+        print_statistics(results, integrator, body_names)
+    
+    # Generate comparison plots
+    for plot_type in ['energy', 'distances', 'computation_time']:
+        plot_comparison(
+            eccentric_results,
+            plot_type=plot_type,
+            output_path=eccentric_dir / f"{plot_type}_comparison.png",
+            title="TRAPPIST-1 System (Eccentric)"
+        )
+    
+    print("\nExperiments completed. Results saved to:")
+    print(f"  Circular orbits: {circular_dir}")
+    print(f"  Eccentric orbits: {eccentric_dir}")
+
+if __name__ == "__main__":
+    main() 

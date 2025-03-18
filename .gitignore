@@ -1,0 +1,89 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Unit tests / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+.spyderproject
+.spyproject
+.ropeproject
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Data files
+*.hdf5
+*.h5
+*.npy
+*.npz
+*.dat
+*.csv
+*.xls
+*.xlsx
+*.db
+*.sqlite
+*.sqlite3
+
+# Large output files
+results/
+plots/
+figures/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.pdf
+*.ps
+
+# Log files
+*.log
+logs/
+log/
+
+# Specific to this project
+three_body.hdf5
+solar_system.hdf5
+*.pkl 
