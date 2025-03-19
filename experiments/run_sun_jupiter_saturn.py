@@ -34,8 +34,8 @@ def main():
     integrators = ['wh-nih', 'leapfrog', 'rk4', 'wisdom_holman']
     
     # Parameters for the simulation
-    dt = 0.01             # Time step (years)
-    duration = 100        # Simulation duration (years)
+    dt = 0.001             # Time step (years)
+    duration = 1000        # Simulation duration (years)
     n_steps = int(duration / dt)  # Number of integration steps
     
     # Body names for plotting
@@ -52,6 +52,9 @@ def main():
     print("\nRunning circular orbit experiments...")
     circular_results = {}
     
+    # Softening parameter for classical integrators
+    softening = 1e-6
+    
     for integrator in integrators:
         print(f"\nUsing {integrator.upper()} integrator...")
         
@@ -60,7 +63,8 @@ def main():
             integrator, 
             generate_sun_jupiter_saturn, 
             dt=dt, 
-            n_steps=n_steps
+            n_steps=n_steps,
+            softening=softening if integrator not in ['wisdom_holman', 'wh-nih'] else 0.0
         )
         
         circular_results[integrator] = results
@@ -87,7 +91,6 @@ def main():
             title_prefix=f"Sun-Jupiter-Saturn ({integrator.upper()})"
         )
         
-        # Plot eccentricity
         plot_eccentricity(
             results,
             reference_body=0,
@@ -120,7 +123,7 @@ def main():
                 body_index=2
             )
     
-    # Run eccentric orbit experiments
+    """# Run eccentric orbit experiments
     print("\nRunning eccentric orbit experiments...")
     eccentric_results = {}
     
@@ -132,7 +135,8 @@ def main():
             integrator, 
             generate_sun_jupiter_saturn_eccentric, 
             dt=dt, 
-            n_steps=n_steps
+            n_steps=n_steps,
+            softening=softening if integrator not in ['wisdom_holman', 'wh-nih'] else 0.0
         )
         
         eccentric_results[integrator] = results
@@ -170,8 +174,8 @@ def main():
         
         # Print statistics
         print_statistics(results, integrator, body_names)
-    
-    # Generate comparison plots
+        
+    # Generate comparison plots for eccentric orbits
     for plot_type in ['energy', 'distances', 'eccentricity', 'computation_time']:
         # For Jupiter (body index 1)
         plot_comparison(
@@ -192,9 +196,7 @@ def main():
                 body_index=2
             )
     
-    print("\nExperiments completed. Results saved to:")
-    print(f"  Circular orbits: {circular_dir}")
-    print(f"  Eccentric orbits: {eccentric_dir}")
+    print("\nExperiments completed. Results saved to:", output_dir)"""
 
 if __name__ == "__main__":
     main() 

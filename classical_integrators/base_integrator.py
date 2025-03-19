@@ -4,14 +4,16 @@ from abc import ABC, abstractmethod
 class BaseIntegrator(ABC):
     """Base class for all classical integrators."""
     
-    def __init__(self, G=4*np.pi**2):
+    def __init__(self, G=4*np.pi**2, softening=1e-6):
         """
         Initialize the integrator.
         
         Args:
             G (float): Gravitational constant. Default is 4π² (useful for astronomical units)
+            softening (float): Softening parameter to prevent numerical instabilities (default: 1e-6)
         """
         self.G = G
+        self.softening = softening
 
     def integrate(self, initial_positions, initial_velocities, masses, dt, n_steps):
         positions = [initial_positions.copy()]
@@ -44,7 +46,7 @@ class BaseIntegrator(ABC):
     
     def compute_acceleration(self, positions, masses):
         """
-        Compute gravitational accelerations for all bodies.
+        Compute gravitational accelerations for all bodies, with softening.
         
         Args:
             positions (np.ndarray): Shape (n_bodies, 3) array of positions
@@ -61,13 +63,15 @@ class BaseIntegrator(ABC):
                 if i != j:
                     r = positions[j] - positions[i]
                     r_mag = np.linalg.norm(r)
-                    accelerations[i] += self.G * masses[j] * r / r_mag**3
+                    # Apply softening to prevent division by zero and numerical instabilities
+                    r_softened = np.sqrt(r_mag**2 + self.softening**2)
+                    accelerations[i] += self.G * masses[j] * r / r_softened**3
                     
         return accelerations
     
     def compute_energy(self, positions, velocities, masses):
         """
-        Compute total energy (kinetic + potential) of the system.
+        Compute total energy (kinetic + potential) of the system, with softening.
         
         Args:
             positions (np.ndarray): Shape (n_bodies, 3) array of positions
@@ -80,13 +84,15 @@ class BaseIntegrator(ABC):
         # Kinetic energy
         kinetic = 0.5 * np.sum(masses[:, np.newaxis] * velocities**2)
         
-        # Potential energy
+        # Potential energy with softening
         potential = 0.0
         n_bodies = positions.shape[0]
         for i in range(n_bodies):
             for j in range(i+1, n_bodies):
                 r = np.linalg.norm(positions[i] - positions[j])
-                potential -= self.G * masses[i] * masses[j] / r
+                # Apply softening to the potential energy calculation
+                r_softened = np.sqrt(r**2 + self.softening**2)
+                potential -= self.G * masses[i] * masses[j] / r_softened
                 
         return kinetic + potential
     

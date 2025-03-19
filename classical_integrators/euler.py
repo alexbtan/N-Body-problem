@@ -3,6 +3,16 @@ from .base_integrator import BaseIntegrator
 
 class Euler(BaseIntegrator):
     """Euler integrator for N-body problems."""
+    
+    def __init__(self, G=4*np.pi**2, softening=1e-6):
+        """
+        Initialize the Euler integrator.
+        
+        Args:
+            G (float): Gravitational constant. Default is 4π² (useful for astronomical units)
+            softening (float): Softening parameter to prevent numerical instabilities (default: 1e-6)
+        """
+        super().__init__(G=G, softening=softening)
 
     def step(self, positions, velocities, masses, dt):
         """

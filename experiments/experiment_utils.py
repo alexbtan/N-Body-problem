@@ -38,27 +38,28 @@ def compute_total_energy(positions, velocities, masses):
     
     return T + V
 
-def get_integrator(integrator_name):
+def get_integrator(integrator_name, softening=1e-6):
     """
     Initialize and return the appropriate integrator.
     
     Args:
         integrator_name (str): Name of the integrator to use ('euler', 'leapfrog', 'rk4', 'wisdom_holman', or 'wh-nih')
+        softening (float): Softening parameter for classical integrators (default: 1e-6)
     
     Returns:
         object: Initialized integrator instance
     """
     if integrator_name == 'rk4':
-        return RungeKutta4()
+        return RungeKutta4(softening=softening)
     elif integrator_name == 'euler':
-        return Euler()
+        return Euler(softening=softening)
     elif integrator_name == 'leapfrog':
-        return Leapfrog()
+        return Leapfrog(softening=softening)
     elif integrator_name == 'wisdom_holman':
-        return WisdomHolmanIntegrator()
+        return WisdomHolmanIntegrator()  # WisdomHolman doesn't need softening
     elif integrator_name == 'wh-nih':
         from neural_integrators.wh import WisdomHolmanNIH
-        integrator = WisdomHolmanNIH()
+        integrator = WisdomHolmanNIH()  # WisdomHolmanNIH doesn't need softening
         return integrator
     else:
         raise ValueError(f"Unknown integrator: {integrator_name}")
@@ -126,7 +127,7 @@ def compute_orbital_elements(positions, velocities, masses, reference_body=0):
         'inclinations': inclinations
     }
 
-def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10000, **kwargs):
+def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10000, softening=1e-6, **kwargs):
     """
     Run an n-body experiment with the specified integrator and initial conditions.
     
@@ -135,6 +136,7 @@ def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10
         initial_conditions_func (callable): Function that returns (positions, velocities, masses)
         dt (float): Time step
         n_steps (int): Number of integration steps
+        softening (float): Softening parameter for classical integrators (default: 1e-6)
         **kwargs: Additional arguments to pass to initial_conditions_func
         
     Returns:
@@ -144,7 +146,7 @@ def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10
     positions, velocities, masses = initial_conditions_func(**kwargs)
     
     # Initialize the appropriate integrator
-    integrator = get_integrator(integrator_name)
+    integrator = get_integrator(integrator_name, softening=softening)
     
     # Run integration and time it
     start_time = time.time()

@@ -31,7 +31,7 @@ def main():
     """Run the TRAPPIST-1 system experiment with different integrators."""
     
     # List of integrators to use
-    integrators = ['euler', 'leapfrog', 'rk4', 'wisdom_holman']
+    integrators = ['wh-nih', 'euler', 'leapfrog', 'rk4', 'wisdom_holman']
     
     # Parameters for the simulation
     dt = 0.001            # Time step (years) - smaller because of the compact system
