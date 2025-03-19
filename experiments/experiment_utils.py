@@ -9,6 +9,7 @@ from classical_integrators.runge_kutta import RungeKutta4
 from classical_integrators.euler import Euler
 from classical_integrators.leapfrog import Leapfrog
 from classical_integrators.wisdom_holman import WisdomHolmanIntegrator
+from neural_integrators.wh import WisdomHolmanNIH
 
 def compute_total_energy(positions, velocities, masses):
     """
@@ -42,7 +43,7 @@ def get_integrator(integrator_name):
     Initialize and return the appropriate integrator.
     
     Args:
-        integrator_name (str): Name of the integrator to use ('euler', 'leapfrog', 'rk4', or 'wisdom_holman')
+        integrator_name (str): Name of the integrator to use ('euler', 'leapfrog', 'rk4', 'wisdom_holman', or 'wh-nih')
     
     Returns:
         object: Initialized integrator instance
@@ -55,8 +56,75 @@ def get_integrator(integrator_name):
         return Leapfrog()
     elif integrator_name == 'wisdom_holman':
         return WisdomHolmanIntegrator()
+    elif integrator_name == 'wh-nih':
+        from neural_integrators.wh import WisdomHolmanNIH
+        integrator = WisdomHolmanNIH()
+        return integrator
     else:
         raise ValueError(f"Unknown integrator: {integrator_name}")
+
+def compute_orbital_elements(positions, velocities, masses, reference_body=0):
+    """
+    Compute orbital elements (including eccentricity) for each body relative to a reference body.
+    
+    Args:
+        positions (np.ndarray): Shape (n_steps, n_bodies, 3) array of positions
+        velocities (np.ndarray): Shape (n_steps, n_bodies, 3) array of velocities
+        masses (np.ndarray): Shape (n_bodies,) array of masses
+        reference_body (int): Index of the reference body (default: 0, typically the star)
+        
+    Returns:
+        dict: Dictionary of orbital elements, including eccentricities
+    """
+    n_steps, n_bodies, _ = positions.shape
+    G = 4 * np.pi**2  # G in AU^3/(M_sun * year^2)
+    
+    # Initialize arrays for orbital elements
+    semi_major_axes = np.zeros((n_steps, n_bodies))
+    eccentricities = np.zeros((n_steps, n_bodies))
+    inclinations = np.zeros((n_steps, n_bodies))
+    
+    # Calculate orbital elements for each timestep
+    for t in range(n_steps):
+        for i in range(n_bodies):
+            if i == reference_body:
+                continue
+                
+            # Calculate relative position and velocity
+            r = positions[t, i] - positions[t, reference_body]
+            v = velocities[t, i] - velocities[t, reference_body]
+            
+            # Calculate distance and speed
+            r_mag = np.linalg.norm(r)
+            v_mag = np.linalg.norm(v)
+            
+            # Calculate specific angular momentum
+            h = np.cross(r, v)
+            h_mag = np.linalg.norm(h)
+            
+            # Calculate specific energy
+            mu = G * (masses[reference_body] + masses[i])
+            energy = 0.5 * v_mag**2 - mu / r_mag
+            
+            # Calculate semi-major axis
+            if energy >= 0:  # Parabolic or hyperbolic orbit
+                semi_major_axes[t, i] = float('inf')
+            else:
+                semi_major_axes[t, i] = -mu / (2 * energy)
+            
+            # Calculate eccentricity using the eccentricity vector
+            e_vec = np.cross(v, h) / mu - r / r_mag
+            eccentricities[t, i] = np.linalg.norm(e_vec)
+            
+            # Calculate inclination
+            if h_mag > 0:
+                inclinations[t, i] = np.arccos(h[2] / h_mag)
+    
+    return {
+        'semi_major_axes': semi_major_axes,
+        'eccentricities': eccentricities,
+        'inclinations': inclinations
+    }
 
 def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10000, **kwargs):
     """
@@ -99,7 +167,8 @@ def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10
         'energies': energies,
         'times': times,
         'computation_time': computation_time,
-        'n_bodies': len(masses)
+        'n_bodies': len(masses),
+        'masses': masses  # Store masses for computing orbital elements
     }
 
 def plot_trajectory(results, body_names=None, output_path=None, title_prefix=""):
@@ -215,15 +284,16 @@ def plot_distances(results, reference_body=0, body_names=None, output_path=None,
     else:
         plt.show()
 
-def plot_comparison(results_dict, plot_type='energy', output_path=None, title="Comparison"):
+def plot_comparison(results_dict, plot_type='energy', output_path=None, title="Comparison", body_index=1):
     """
     Plot comparison between different integrators.
     
     Args:
         results_dict (dict): Dictionary mapping integrator names to results dictionaries
-        plot_type (str): Type of plot ('energy', 'distances', or 'computation_time')
+        plot_type (str): Type of plot ('energy', 'distances', 'eccentricity', or 'computation_time')
         output_path (str): Path to save the plot (if None, the plot is displayed)
         title (str): Plot title
+        body_index (int): Index of the body to focus on for eccentricity and distance plots (default: 1)
     """
     plt.figure(figsize=(12, 8))
     
@@ -244,13 +314,11 @@ def plot_comparison(results_dict, plot_type='energy', output_path=None, title="C
         plt.yscale('log')
         
     elif plot_type == 'distances':
-        # Distances comparison (using first non-reference body only for clarity)
+        # Distances comparison (using specified body for clarity)
         reference_body = 0
-        non_ref_body = 1
-        
         for i, (name, results) in enumerate(results_dict.items()):
             distances = np.linalg.norm(
-                results['positions'][:, non_ref_body] - results['positions'][:, reference_body], 
+                results['positions'][:, body_index] - results['positions'][:, reference_body], 
                 axis=1
             )
             plt.plot(results['times'], distances, '-', color=colors[i], label=name.upper())
@@ -259,6 +327,28 @@ def plot_comparison(results_dict, plot_type='energy', output_path=None, title="C
         plt.xlabel('Time (years)')
         plt.ylabel('Distance (AU)')
         plt.title(f'{title} - Orbit Comparison')
+        
+    elif plot_type == 'eccentricity':
+        # Eccentricity comparison
+        reference_body = 0
+        for i, (name, results) in enumerate(results_dict.items()):
+            # Compute orbital elements
+            n_bodies = results['n_bodies']
+            orbital_elements = compute_orbital_elements(
+                results['positions'], 
+                results['velocities'], 
+                np.ones(n_bodies) if 'masses' not in results else results['masses'],
+                reference_body
+            )
+            
+            # Extract and plot eccentricity for the selected body
+            eccentricities = orbital_elements['eccentricities'][:, body_index]
+            plt.plot(results['times'], eccentricities, '-', color=colors[i], label=name.upper())
+        
+        plt.grid(True)
+        plt.xlabel('Time (years)')
+        plt.ylabel('Eccentricity')
+        plt.title(f'{title} - Eccentricity Comparison')
         
     elif plot_type == 'computation_time':
         # Computation time comparison (bar chart)
@@ -319,6 +409,56 @@ def print_statistics(results, integrator_name, body_names=None):
             print(f"  {body_names[i]}: {np.mean(distances):.4f} AU")
     
     print("-" * 40)
+
+def plot_eccentricity(results, reference_body=0, body_names=None, output_path=None, title_prefix=""):
+    """
+    Plot the eccentricity of bodies over time.
+    
+    Args:
+        results (dict): Results dictionary from run_experiment
+        reference_body (int): Index of the reference body (default: 0, typically the star)
+        body_names (list): List of names for each body (default: Body 0, Body 1, etc.)
+        output_path (str): Path to save the plot (if None, the plot is displayed)
+        title_prefix (str): Prefix for the plot title
+    """
+    n_bodies = results['n_bodies']
+    
+    if body_names is None:
+        body_names = [f"Body {i}" for i in range(n_bodies)]
+    
+    # Compute orbital elements
+    orbital_elements = compute_orbital_elements(
+        results['positions'], 
+        results['velocities'], 
+        np.ones(n_bodies) if 'masses' not in results else results['masses'],
+        reference_body
+    )
+    
+    # Extract eccentricities
+    eccentricities = orbital_elements['eccentricities']
+    
+    plt.figure(figsize=(12, 6))
+    
+    # Create a color cycle
+    colors = plt.cm.tab10(np.linspace(0, 1, n_bodies))
+    
+    # Plot eccentricity for each body (except the reference body)
+    for i in range(n_bodies):
+        if i != reference_body:
+            plt.plot(results['times'], eccentricities[:, i], '-', 
+                     color=colors[i], label=f"{body_names[i]}")
+    
+    plt.grid(True)
+    plt.xlabel('Time (years)')
+    plt.ylabel('Eccentricity')
+    plt.title(f'{title_prefix} Eccentricity Over Time')
+    plt.legend()
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
 
 def ensure_directory(path):
     """

@@ -1,6 +1,5 @@
 """Classical integrators package."""
 
-from . import base
 from . import euler
 from . import leapfrog
 from . import wisdom_holman

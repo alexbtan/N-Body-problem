@@ -23,14 +23,15 @@ from experiments.experiment_utils import (
     plot_distances,
     plot_comparison,
     print_statistics,
-    ensure_directory
+    ensure_directory,
+    plot_eccentricity
 )
 
 def main():
     """Run the Sun-Jupiter-Saturn experiment with different integrators."""
     
     # List of integrators to use
-    integrators = ['euler', 'leapfrog', 'rk4', 'wisdom_holman']
+    integrators = ['wh-nih', 'leapfrog', 'rk4', 'wisdom_holman']
     
     # Parameters for the simulation
     dt = 0.01             # Time step (years)
@@ -86,17 +87,38 @@ def main():
             title_prefix=f"Sun-Jupiter-Saturn ({integrator.upper()})"
         )
         
+        # Plot eccentricity
+        plot_eccentricity(
+            results,
+            reference_body=0,
+            body_names=body_names,
+            output_path=circular_dir / f"eccentricity_{integrator}.png",
+            title_prefix=f"Sun-Jupiter-Saturn ({integrator.upper()})"
+        )
+        
         # Print statistics
         print_statistics(results, integrator, body_names)
     
     # Generate comparison plots
-    for plot_type in ['energy', 'distances', 'computation_time']:
+    for plot_type in ['energy', 'distances', 'eccentricity', 'computation_time']:
+        # For Jupiter (body index 1)
         plot_comparison(
             circular_results,
             plot_type=plot_type,
-            output_path=circular_dir / f"{plot_type}_comparison.png",
-            title="Sun-Jupiter-Saturn (Circular)"
+            output_path=circular_dir / f"{plot_type}_jupiter_comparison.png",
+            title="Sun-Jupiter-Saturn (Circular)",
+            body_index=1
         )
+        
+        # For Saturn (body index 2)
+        if plot_type in ['distances', 'eccentricity']:
+            plot_comparison(
+                circular_results,
+                plot_type=plot_type,
+                output_path=circular_dir / f"{plot_type}_saturn_comparison.png",
+                title="Sun-Jupiter-Saturn (Circular)",
+                body_index=2
+            )
     
     # Run eccentric orbit experiments
     print("\nRunning eccentric orbit experiments...")
@@ -137,17 +159,38 @@ def main():
             title_prefix=f"Sun-Jupiter-Saturn Eccentric ({integrator.upper()})"
         )
         
+        # Plot eccentricity
+        plot_eccentricity(
+            results,
+            reference_body=0,
+            body_names=body_names,
+            output_path=eccentric_dir / f"eccentricity_{integrator}.png",
+            title_prefix=f"Sun-Jupiter-Saturn Eccentric ({integrator.upper()})"
+        )
+        
         # Print statistics
         print_statistics(results, integrator, body_names)
     
     # Generate comparison plots
-    for plot_type in ['energy', 'distances', 'computation_time']:
+    for plot_type in ['energy', 'distances', 'eccentricity', 'computation_time']:
+        # For Jupiter (body index 1)
         plot_comparison(
             eccentric_results,
             plot_type=plot_type,
-            output_path=eccentric_dir / f"{plot_type}_comparison.png",
-            title="Sun-Jupiter-Saturn (Eccentric)"
+            output_path=eccentric_dir / f"{plot_type}_jupiter_comparison.png",
+            title="Sun-Jupiter-Saturn (Eccentric)",
+            body_index=1
         )
+        
+        # For Saturn (body index 2)
+        if plot_type in ['distances', 'eccentricity']:
+            plot_comparison(
+                eccentric_results,
+                plot_type=plot_type,
+                output_path=eccentric_dir / f"{plot_type}_saturn_comparison.png",
+                title="Sun-Jupiter-Saturn (Eccentric)",
+                body_index=2
+            )
     
     print("\nExperiments completed. Results saved to:")
     print(f"  Circular orbits: {circular_dir}")

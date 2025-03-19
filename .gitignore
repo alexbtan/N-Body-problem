@@ -82,6 +82,7 @@ figures/
 *.log
 logs/
 log/
+borrowed/
 
 # Specific to this project
 three_body.hdf5

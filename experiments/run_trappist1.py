@@ -23,7 +23,8 @@ from experiments.experiment_utils import (
     plot_distances,
     plot_comparison,
     print_statistics,
-    ensure_directory
+    ensure_directory,
+    plot_eccentricity
 )
 
 def main():
@@ -89,16 +90,35 @@ def main():
             title_prefix=f"TRAPPIST-1 System ({integrator.upper()})"
         )
         
+        # Plot eccentricity
+        plot_eccentricity(
+            results,
+            reference_body=0,
+            body_names=body_names,
+            output_path=circular_dir / f"eccentricity_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System ({integrator.upper()})"
+        )
+        
         # Print statistics
         print_statistics(results, integrator, body_names)
     
     # Generate comparison plots
-    for plot_type in ['energy', 'distances', 'computation_time']:
+    for plot_type in ['energy', 'distances', 'eccentricity', 'computation_time']:
         plot_comparison(
             circular_results,
             plot_type=plot_type,
             output_path=circular_dir / f"{plot_type}_comparison.png",
             title="TRAPPIST-1 System (Circular)"
+        )
+    
+    # Generate eccentricity comparison for each planet
+    for i, name in enumerate(body_names[1:], 1):  # Skip the star
+        plot_comparison(
+            circular_results,
+            plot_type='eccentricity',
+            output_path=circular_dir / f"eccentricity_{name.split('-')[1].lower()}_comparison.png",
+            title=f"TRAPPIST-1 System (Circular) - {name}",
+            body_index=i
         )
     
     # Run eccentric orbit experiments
@@ -140,16 +160,35 @@ def main():
             title_prefix=f"TRAPPIST-1 System Eccentric ({integrator.upper()})"
         )
         
+        # Plot eccentricity
+        plot_eccentricity(
+            results,
+            reference_body=0,
+            body_names=body_names,
+            output_path=eccentric_dir / f"eccentricity_{integrator}.png",
+            title_prefix=f"TRAPPIST-1 System Eccentric ({integrator.upper()})"
+        )
+        
         # Print statistics
         print_statistics(results, integrator, body_names)
     
     # Generate comparison plots
-    for plot_type in ['energy', 'distances', 'computation_time']:
+    for plot_type in ['energy', 'distances', 'eccentricity', 'computation_time']:
         plot_comparison(
             eccentric_results,
             plot_type=plot_type,
             output_path=eccentric_dir / f"{plot_type}_comparison.png",
             title="TRAPPIST-1 System (Eccentric)"
+        )
+    
+    # Generate eccentricity comparison for each planet
+    for i, name in enumerate(body_names[1:], 1):  # Skip the star
+        plot_comparison(
+            eccentric_results,
+            plot_type='eccentricity',
+            output_path=eccentric_dir / f"eccentricity_{name.split('-')[1].lower()}_comparison.png",
+            title=f"TRAPPIST-1 System (Eccentric) - {name}",
+            body_index=i
         )
     
     print("\nExperiments completed. Results saved to:")
