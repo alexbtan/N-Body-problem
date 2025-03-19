@@ -66,18 +66,6 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 
-# Large output files
-results/
-plots/
-figures/
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.bmp
-*.pdf
-*.ps
-
 # Log files
 *.log
 logs/
