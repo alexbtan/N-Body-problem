@@ -31,11 +31,11 @@ def main():
     """Run the Sun-Jupiter-Saturn experiment with different integrators."""
     
     # List of integrators to use
-    integrators = ['wh-nih', 'leapfrog', 'rk4', 'wisdom_holman']
+    integrators = ['leapfrog', 'rk4', 'wisdom_holman']
     
     # Parameters for the simulation
     dt = 0.001             # Time step (years)
-    duration = 1000        # Simulation duration (years)
+    duration = 100    # Simulation duration (years)
     n_steps = int(duration / dt)  # Number of integration steps
     
     # Body names for plotting

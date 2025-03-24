@@ -31,7 +31,7 @@ def main():
     """Run the TRAPPIST-1 system experiment with different integrators."""
     
     # List of integrators to use
-    integrators = ['wh-nih', 'euler', 'leapfrog', 'rk4', 'wisdom_holman']
+    integrators = ['wh-nih','wisdom_holman']
     
     # Parameters for the simulation
     dt = 0.001            # Time step (years) - smaller because of the compact system
@@ -122,7 +122,7 @@ def main():
         )
     
     # Run eccentric orbit experiments
-    print("\nRunning eccentric orbit experiments...")
+    """print("\nRunning eccentric orbit experiments...")
     eccentric_results = {}
     
     for integrator in integrators:
@@ -189,7 +189,7 @@ def main():
             output_path=eccentric_dir / f"eccentricity_{name.split('-')[1].lower()}_comparison.png",
             title=f"TRAPPIST-1 System (Eccentric) - {name}",
             body_index=i
-        )
+        )"""
     
     print("\nExperiments completed. Results saved to:")
     print(f"  Circular orbits: {circular_dir}")

@@ -66,7 +66,7 @@ class WisdomHolmanNIH(Integrator):
         self.training_mode = False 
         self.coord = []
         self.dcoord = []
-        self.energy = []
+        self.energies = []
         self.__particle_init = None  # initial states of the particle 
         self.__energy_init = 0.0
         self.logger = self.create_logger()
@@ -102,14 +102,14 @@ class WisdomHolmanNIH(Integrator):
         self.energy = []
 
 
-    def integrate(self, to_time, nih=False):
-        """
+    """def integrate(self, to_time, nih=False):
+        
         Integrate the system to the specified time, using neural interacting Hamiltonian if specified.
         
         :param to_time: Time to integrate to
         :param nih: Whether to use neural interacting Hamiltonian
         :return: 0 on success
-        """
+        
         # Log which method we're using
         if nih:
             self.logger.info("Using Neural Interacting Hamiltonian for integration")
@@ -163,7 +163,7 @@ class WisdomHolmanNIH(Integrator):
                 
             self.store_state()
 
-        return 0
+        return self.particles.positions, self.particles.velocities, self.energy"""
 
     def store_state(self):
         # if self.buf is None:
