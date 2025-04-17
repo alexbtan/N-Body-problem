@@ -47,7 +47,8 @@ class WisdomHolmanIntegrator(BaseIntegrator):
             )
         
         # Set integration parameters - ensure we get exactly n_steps+1 outputs (initial + n_steps)
-        sim.store_dt = dt
+        sim.store_dt = 0.1
+
         sim.h = dt/10  # Using smaller step size for accuracy
         
         # Initialize the integrator

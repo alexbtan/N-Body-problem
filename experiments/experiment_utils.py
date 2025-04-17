@@ -147,12 +147,14 @@ def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10
     
     # Initialize the appropriate integrator
     integrator = get_integrator(integrator_name, softening=softening)
-    
+    if(integrator_name == 'wh-nih'):
+        dt = 0.1
     # Run integration and time it
     start_time = time.time()
     trajectory_positions, trajectory_velocities, energies = integrator.integrate(positions, velocities, masses, dt, n_steps)
     end_time = time.time()
     computation_time = end_time - start_time
+    time_per_step = computation_time / n_steps  # Calculate average time per step
     
     # Create times array
     times = np.arange(0, (n_steps+1) * dt, dt)
@@ -169,6 +171,7 @@ def run_experiment(integrator_name, initial_conditions_func, dt=0.01, n_steps=10
         'energies': energies,
         'times': times,
         'computation_time': computation_time,
+        'time_per_step': time_per_step,  # Add time per step to results
         'n_bodies': len(masses),
         'masses': masses  # Store masses for computing orbital elements
     }
@@ -216,6 +219,62 @@ def plot_trajectory(results, body_names=None, output_path=None, title_prefix="")
     else:
         plt.show()
 
+def plot_all_trajectories(results_dict, body_names=None, output_path=None, title_prefix=""):
+    """
+    Plot the trajectories of all integrators on the same figure.
+    
+    Args:
+        results_dict (dict): Dictionary mapping integrator names to results dictionaries
+        body_names (list): List of names for each body (default: Body 0, Body 1, etc.)
+        output_path (str): Path to save the plot (if None, the plot is displayed)
+        title_prefix (str): Prefix for the plot title
+    """
+    # Get the number of bodies from the first result
+    first_result = next(iter(results_dict.values()))
+    n_bodies = first_result['n_bodies']
+    
+    if body_names is None:
+        body_names = [f"Body {i}" for i in range(n_bodies)]
+    
+    # Create a figure with 2x2 subplots
+    plt.figure(figsize=(12, 12))
+    
+    # Create a color cycle for bodies
+    body_colors = plt.cm.tab10(np.linspace(0, 1, n_bodies))
+    
+    # Plot each integrator's trajectories
+    for i, (integrator_name, results) in enumerate(results_dict.items()):
+        plt.subplot(2, 2, i+1)
+        
+        # Plot each body's trajectory
+        for j in range(n_bodies):
+            # Plot the trajectory with low alpha
+            plt.plot(results['positions'][:, j, 0], results['positions'][:, j, 1], 
+                     '-', color=body_colors[j], alpha=0.2)
+            
+            # Plot points for clarity
+            plt.plot(results['positions'][:, j, 0], results['positions'][:, j, 1], 
+                     '.', color=body_colors[j], markersize=1, label=body_names[j])
+        
+        plt.axis('equal')
+        plt.grid(True)
+        plt.xlabel('x (AU)')
+        plt.ylabel('y (AU)')
+        plt.title(f'{integrator_name.upper()}\n(Time: {results["times"][-1]:.1f} years)')
+        
+        # Only add legend to the first subplot
+        if i == 0:
+            plt.legend()
+    
+    plt.suptitle(f'{title_prefix} Trajectories', fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for suptitle
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
 def plot_energy_conservation(results, output_path=None, title_prefix=""):
     """
     Plot the relative energy error over time.
@@ -228,14 +287,135 @@ def plot_energy_conservation(results, output_path=None, title_prefix=""):
     plt.figure(figsize=(12, 6))
     
     initial_energy = results['energies'][0]
-    relative_energy_error = np.abs((results['energies'] - initial_energy) / np.abs(initial_energy))
     
-    plt.plot(results['times'], relative_energy_error)
+    # Handle the case where initial_energy is zero or very close to zero
+    if np.abs(initial_energy) < 1e-30:
+        # If initial energy is effectively zero, plot absolute energy instead
+        plt.plot(results['times'], np.abs(results['energies']), label='Absolute Energy')
+        plt.ylabel('|Energy|')
+        plt.title(f'{title_prefix} Energy (Initial Energy ≈ 0)')
+    else:
+        # Calculate relative error with protection against division by zero
+        relative_energy_error = np.abs((results['energies'] - initial_energy) / np.abs(initial_energy))
+        plt.plot(results['times'], relative_energy_error, label='Relative Energy Error')
+        plt.ylabel('|Relative Energy Error|')
+        plt.title(f'{title_prefix} Energy Conservation')
+        plt.yscale('log')
+    
+    plt.grid(True)
+    plt.xlabel('Time (years)')
+    plt.legend()
+    
+    if output_path:
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
+def plot_angular_momentum_conservation(results, output_path=None, title_prefix=""):
+    """
+    Plot the relative angular momentum error over time.
+    
+    Args:
+        results (dict): Results dictionary from run_experiment
+        output_path (str): Path to save the plot (if None, the plot is displayed)
+        title_prefix (str): Prefix for the plot title
+    """
+    plt.figure(figsize=(12, 6))
+    
+    # Compute angular momentum at each timestep
+    n_steps = len(results['times'])
+    angular_momentum = np.zeros(n_steps)
+    
+    for t in range(n_steps):
+        # Compute total angular momentum for all bodies
+        L = np.zeros(3)
+        for i in range(results['n_bodies']):
+            r = results['positions'][t, i]
+            v = results['velocities'][t, i]
+            m = results['masses'][i]
+            L += m * np.cross(r, v)
+        angular_momentum[t] = np.linalg.norm(L)
+    
+    # Compute relative error
+    initial_angular_momentum = angular_momentum[0]
+    relative_angular_momentum_error = np.abs((angular_momentum - initial_angular_momentum) / initial_angular_momentum)
+    
+    plt.plot(results['times'], relative_angular_momentum_error)
+    plt.grid(True)
+    plt.xlabel('Time (years)')
+    plt.ylabel('|Relative Angular Momentum Error|')
+    plt.title(f'{title_prefix} Angular Momentum Conservation')
+    plt.yscale('log')
+
+    if output_path:
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+    else:
+        plt.show()
+
+def plot_conservation_combined(results_dict, output_path=None, title_prefix=""):
+    """
+    Plot energy and angular momentum conservation side by side.
+    
+    Args:
+        results (dict): Results dictionary from run_experiment
+        output_path (str): Path to save the plot (if None, the plot is displayed)
+        title_prefix (str): Prefix for the plot title
+    """
+    # Create a color cycle
+    colors = plt.cm.tab10(np.linspace(0, 1, len(results_dict)))
+
+    plt.figure(figsize=(15, 6))
+    
+    # Energy conservation subplot
+    plt.subplot(1, 2, 1)
+    # Energy conservation comparison
+    for i, (name, results) in enumerate(results_dict.items()):
+        initial_energy = results['energies'][0]
+        relative_energy_error = np.abs((results['energies'] - initial_energy) / np.abs(initial_energy))
+        plt.plot(results['times'], relative_energy_error, '-', color=colors[i], label=name.upper())
+    
     plt.grid(True)
     plt.xlabel('Time (years)')
     plt.ylabel('|Relative Energy Error|')
-    plt.title(f'{title_prefix} Energy Conservation')
+    plt.title(f'Energy Conservation Comparison')
     plt.yscale('log')
+    plt.legend()
+    # Angular momentum conservation subplot
+    plt.subplot(1, 2, 2)
+    
+    # Angular momentum conservation comparison
+    for i, (name, results) in enumerate(results_dict.items()):
+        # Compute angular momentum at each timestep
+        n_steps = len(results['times'])
+        angular_momentum = np.zeros(n_steps)
+        
+        for t in range(n_steps):
+            # Compute total angular momentum for all bodies
+            L = np.zeros(3)
+            for j in range(results['n_bodies']):
+                r = results['positions'][t, j]
+                v = results['velocities'][t, j]
+                m = results['masses'][j]
+                L += m * np.cross(r, v)
+            angular_momentum[t] = np.linalg.norm(L)
+        
+        # Compute relative error
+        initial_angular_momentum = angular_momentum[0]
+        relative_angular_momentum_error = np.abs((angular_momentum - initial_angular_momentum) / initial_angular_momentum)
+        
+        plt.plot(results['times'], relative_angular_momentum_error, '-', color=colors[i], label=name.upper())
+    
+    plt.grid(True)
+    plt.xlabel('Time (years)')
+    plt.ylabel('|Relative Angular Momentum Error|')
+    plt.title(f'Angular Momentum Conservation Comparison')
+    plt.yscale('log')
+    
+    plt.legend()
+    
+    plt.tight_layout()
     
     if output_path:
         plt.savefig(output_path, dpi=300)
@@ -353,19 +533,48 @@ def plot_comparison(results_dict, plot_type='energy', output_path=None, title="C
         plt.title(f'{title} - Eccentricity Comparison')
         
     elif plot_type == 'computation_time':
-        # Computation time comparison (bar chart)
+        # Average time per step comparison (bar chart)
         names = list(results_dict.keys())
-        times = [results['computation_time'] for results in results_dict.values()]
+        times = [results['time_per_step'] for results in results_dict.values()]
         
         plt.figure(figsize=(10, 6))
         plt.bar(range(len(names)), times, color=colors)
         plt.xticks(range(len(names)), [name.upper() for name in names])
-        plt.ylabel('Computation Time (seconds)')
+        plt.ylabel('Average Time per Step (seconds)')
         plt.title(f'{title} - Performance Comparison')
         
         # Add time values on top of bars
         for i, v in enumerate(times):
-            plt.text(i, v + 0.1, f"{v:.2f}s", ha='center')
+            plt.text(i, v + v*0.05, f"{v*1000:.2f} ms", ha='center')  # Display in milliseconds
+            
+    elif plot_type == 'angular_momentum':
+        # Angular momentum conservation comparison
+        for i, (name, results) in enumerate(results_dict.items()):
+            # Compute angular momentum at each timestep
+            n_steps = len(results['times'])
+            angular_momentum = np.zeros(n_steps)
+            
+            for t in range(n_steps):
+                # Compute total angular momentum for all bodies
+                L = np.zeros(3)
+                for j in range(results['n_bodies']):
+                    r = results['positions'][t, j]
+                    v = results['velocities'][t, j]
+                    m = results['masses'][j]
+                    L += m * np.cross(r, v)
+                angular_momentum[t] = np.linalg.norm(L)
+            
+            # Compute relative error
+            initial_angular_momentum = angular_momentum[0]
+            relative_angular_momentum_error = np.abs((angular_momentum - initial_angular_momentum) / initial_angular_momentum)
+            
+            plt.plot(results['times'], relative_angular_momentum_error, '-', color=colors[i], label=name.upper())
+        
+        plt.grid(True)
+        plt.xlabel('Time (years)')
+        plt.ylabel('|Relative Angular Momentum Error|')
+        plt.title(f'{title} - Angular Momentum Conservation Comparison')
+        plt.yscale('log')
     
     plt.legend()
     

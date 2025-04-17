@@ -2,7 +2,10 @@ import numpy as np
 from .base_integrator import BaseIntegrator
 
 class Leapfrog(BaseIntegrator):
-    """Leapfrog (Verlet) integrator for N-body problems."""
+    """
+    Leapfrog (Verlet) integrator for N-body problems.
+    This is a symplectic integrator that preserves energy well for long-term integrations.
+    """
     
     def __init__(self, G=4*np.pi**2, softening=1e-6):
         """
@@ -16,7 +19,7 @@ class Leapfrog(BaseIntegrator):
     
     def step(self, positions, velocities, masses, dt):
         """
-        Perform one Leapfrog integration step.
+        Perform one step of the leapfrog integration.
         
         Args:
             positions (np.ndarray): Shape (n_bodies, 3) array of positions
@@ -27,15 +30,15 @@ class Leapfrog(BaseIntegrator):
         Returns:
             tuple: Updated (positions, velocities)
         """
-        # First half-step velocity update
-        accelerations = self.compute_acceleration(positions, masses)
-        velocities_half = velocities + accelerations * dt/2
+        # First half-kick
+        acc = self.compute_acceleration(positions, masses)
+        velocities_half = velocities + 0.5 * dt * acc
         
-        # Full position update
-        new_positions = positions + velocities_half * dt
+        # Drift
+        positions_new = positions + dt * velocities_half
         
-        # Second half-step velocity update
-        accelerations_new = self.compute_acceleration(new_positions, masses)
-        new_velocities = velocities_half + accelerations_new * dt/2
+        # Second half-kick
+        acc = self.compute_acceleration(positions_new, masses)
+        velocities_new = velocities_half + 0.5 * dt * acc
         
-        return new_positions, new_velocities 
+        return positions_new, velocities_new 

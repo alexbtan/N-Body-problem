@@ -24,18 +24,20 @@ from experiments.experiment_utils import (
     plot_comparison,
     print_statistics,
     ensure_directory,
-    plot_eccentricity
+    plot_eccentricity,
+    plot_all_trajectories,
+    plot_conservation_combined
 )
 
 def main():
     """Run the TRAPPIST-1 system experiment with different integrators."""
     
     # List of integrators to use
-    integrators = ['wh-nih','wisdom_holman']
+    integrators = ['wh-nih','wisdom_holman', 'leapfrog', 'rk4']
     
     # Parameters for the simulation
     dt = 0.001            # Time step (years) - smaller because of the compact system
-    duration = 10         # Simulation duration (years) - shorter due to faster orbital periods
+    duration = 200         # Simulation duration (years) - shorter due to faster orbital periods
     n_steps = int(duration / dt)  # Number of integration steps
     
     # Body names for plotting
@@ -68,13 +70,6 @@ def main():
         
         circular_results[integrator] = results
         
-        # Generate plots
-        plot_trajectory(
-            results,
-            body_names=body_names,
-            output_path=circular_dir / f"trajectory_{integrator}.png",
-            title_prefix=f"TRAPPIST-1 System ({integrator.upper()})"
-        )
         
         plot_energy_conservation(
             results,
@@ -102,6 +97,21 @@ def main():
         # Print statistics
         print_statistics(results, integrator, body_names)
     
+    # Plot all trajectories on the same figure
+    plot_all_trajectories(
+        circular_results,
+        body_names=body_names,
+        output_path=circular_dir / "all_trajectories.png",
+        title_prefix="Trappist-1 (Circular)"
+    )
+    
+    # Generate combined conservation plot for circular orbits
+    plot_conservation_combined(
+        circular_results,
+        output_path=circular_dir / "conservation_combined.png",
+        title_prefix="Trappist-1 (Circular)"
+    )
+
     # Generate comparison plots
     for plot_type in ['energy', 'distances', 'eccentricity', 'computation_time']:
         plot_comparison(
