@@ -1,66 +1,63 @@
 import numpy as np
 from .base_integrator import BaseIntegrator
+from typing import Tuple
+
 
 class RungeKutta4(BaseIntegrator):
-    """4th order Runge-Kutta integrator for N-body problems."""
-    
-    def __init__(self, G=4*np.pi**2, softening=1e-6):
+    """
+    4th order Runge-Kutta integrator for N-body problems.
+    """
+
+    def __init__(self, G: float = 4 * np.pi ** 2, softening: float = 1e-6):
         """
         Initialize the RK4 integrator.
-        
+
         Args:
-            G (float): Gravitational constant. Default is 4π² (useful for astronomical units)
-            softening (float): Softening parameter to prevent numerical instabilities (default: 1e-6)
+            G: Gravitational constant (default: 4π², for astronomical units)
+            softening: Softening parameter to prevent numerical instabilities
         """
         super().__init__(G=G, softening=softening)
-    
-    def step(self, positions, velocities, masses, dt):
+
+    def step(
+        self,
+        positions: np.ndarray,
+        velocities: np.ndarray,
+        masses: np.ndarray,
+        dt: float
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Perform one RK4 integration step.
-        
+
         Args:
-            positions (np.ndarray): Shape (n_bodies, 3) array of positions
-            velocities (np.ndarray): Shape (n_bodies, 3) array of velocities
-            masses (np.ndarray): Shape (n_bodies,) array of masses
-            dt (float): Time step
-            
+            positions: (n_bodies, 3) array of positions
+            velocities: (n_bodies, 3) array of velocities
+            masses: (n_bodies,) array of masses
+            dt: Time step
         Returns:
-            tuple: Updated (positions, velocities)
+            Updated (positions, velocities)
         """
-        # State vector y = [positions, velocities]
-        y = np.concatenate([positions, velocities])
-        
-        # RK4 coefficients
-        k1 = self._compute_derivatives(y, masses)
-        k2 = self._compute_derivatives(y + 0.5*dt*k1, masses)
-        k3 = self._compute_derivatives(y + 0.5*dt*k2, masses)
-        k4 = self._compute_derivatives(y + dt*k3, masses)
-        
-        # Update state
-        y_new = y + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
-        
         n_bodies = positions.shape[0]
+        y = np.concatenate([positions, velocities])
+        k1 = self._compute_derivatives(y, masses)
+        k2 = self._compute_derivatives(y + 0.5 * dt * k1, masses)
+        k3 = self._compute_derivatives(y + 0.5 * dt * k2, masses)
+        k4 = self._compute_derivatives(y + dt * k3, masses)
+        y_new = y + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
         return y_new[:n_bodies], y_new[n_bodies:]
-    
-    def _compute_derivatives(self, y, masses):
+
+    def _compute_derivatives(self, y: np.ndarray, masses: np.ndarray) -> np.ndarray:
         """
         Compute derivatives for the state vector y.
-        
+
         Args:
-            y (np.ndarray): State vector [positions, velocities]
-            masses (np.ndarray): Shape (n_bodies,) array of masses
-            
+            y: State vector [positions, velocities]
+            masses: (n_bodies,) array of masses
         Returns:
-            np.ndarray: Derivatives [velocities, accelerations]
+            Derivatives [velocities, accelerations]
         """
         n_bodies = masses.shape[0]
         positions = y[:n_bodies]
         velocities = y[n_bodies:]
-        
-        # Position derivatives are velocities
         pos_derivs = velocities
-        
-        # Velocity derivatives are accelerations
         accelerations = self.compute_acceleration(positions, masses)
-        
         return np.concatenate([pos_derivs, accelerations]) 
