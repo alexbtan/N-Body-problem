@@ -1,7 +1,7 @@
 """
-Last modified: July 2022 
 Author: Maxwell X. Cai, Veronica Saz Ulibarrena 
 Description: integrator for the creation of the dataset. 
+Adapted for use by Alex Tan 
 """
 
 from abie.integrator import Integrator

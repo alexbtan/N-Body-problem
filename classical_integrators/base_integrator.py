@@ -10,7 +10,7 @@ class BaseIntegrator(ABC):
 
     def __init__(self, G: float = 4 * np.pi ** 2, softening: float = 1e-6):
         """
-        Initialize the integrator.
+        Initialise the integrator.
 
         Args:
             G: Gravitational constant (default: 4π², for astronomical units)

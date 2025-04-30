@@ -154,7 +154,7 @@ def train(config: Dict[str, Any]) -> Tuple[NIH, Dict[str, list]]:
     ).to(device)
 
     print(model)
-    optimizer = torch.optim.Adam(model.parameters(), config['learn_rate'], weight_decay=0)
+    optimiser = torch.optim.Adam(model.parameters(), config['learn_rate'], weight_decay=0)
 
     # Load and prepare data
     data = get_dataset(config['name'], config['data_dir'])
@@ -194,8 +194,8 @@ def train(config: Dict[str, Any]) -> Tuple[NIH, Dict[str, list]]:
         # Backpropagation
         loss.backward()
         grad = torch.cat([p.grad.flatten() for p in model.parameters() if p.grad is not None]).clone()
-        optimizer.step()
-        optimizer.zero_grad()
+        optimiser.step()
+        optimiser.zero_grad()
 
         # Test step
         test_indices = torch.randperm(test_x.shape[0], device=device)[:config['batch_size']]

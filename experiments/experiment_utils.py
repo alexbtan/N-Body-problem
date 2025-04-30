@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from classical_integrators.runge_kutta import RungeKutta4
 from classical_integrators.euler import Euler
 from classical_integrators.leapfrog import Leapfrog
-from classical_integrators.wisdom_holman import WisdomHolmanIntegrator
 from neural_integrators.wh import WisdomHolmanNIH
 
 def compute_total_energy(
@@ -41,12 +40,12 @@ def get_integrator(
     integrator_name: str, softening: float = 1e-6
 ) -> Any:
     """
-    Initialize and return the appropriate integrator.
+    Initialise and return the appropriate integrator.
     Args:
         integrator_name: Name of the integrator to use
         softening: Softening parameter for classical integrators
     Returns:
-        Initialized integrator instance
+        Initialised integrator instance
     """
     if integrator_name == 'rk4':
         return RungeKutta4(softening=softening)
